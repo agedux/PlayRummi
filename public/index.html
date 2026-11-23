@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PlayRummi · 拉密牌桌</title><link rel="stylesheet" href="/style.css">
+<header><div class="brand"><i>R</i> PlayRummi</div><nav><button id="aiSettings">AI 設定</button><button id="history">牌局紀錄</button><button id="setup">開新桌</button></nav></header>
+<main>
+  <section id="seats" aria-label="席位"></section>
+  <section class="felt"><div class="tablehead"><span class="pool">牌池 <b id="pool">—</b> 張</span></div>
+    <div id="board"></div>
+  </section>
+  <div class="home"><div class="seat human"><span class="avatar">我</span></div>
+  <section class="rack"><div class="tablehead"><strong>我的牌架 <em id="count"></em></strong><button id="sort">依數字排列</button></div><div id="hand"></div></section></div>
+  <div class="footer"><span id="feedback" role="status"></span><div id="actions"></div></div>
+</main>
+<dialog id="lobby"><form method="dialog"><button class="close" aria-label="關閉">×</button></form><small>RUMMI CLUB</small><h2>選擇牌友</h2>
+<p>選 1 至 3 位對手同桌。練習對手可直接遊玩。</p><div id="choices"></div><button id="lobbySettings">設定 AI 金鑰與模型</button><p id="lobbyNote"></p><button class="primary" id="start">洗牌開局</button></dialog>
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+  <form method="dialog"><button class="close" aria-label="關閉">×</button></form><h2 id="settingsTitle">AI 設定</h2>
+  <form id="settingsForm">
+    <label>供應商<select id="provider"></select></label>
+    <label>API 金鑰<input id="apiKey" type="password" autocomplete="off" spellcheck="false" maxlength="4096"></label>
+    <label>模型<select id="model"></select></label>
+    <label id="customLabel" hidden>自訂模型 ID<input id="customModel" maxlength="200" spellcheck="false"></label>
+    <label id="timeoutLabel" hidden>單回合等待上限（分鐘）<input id="timeoutMinutes" type="number" min="1" max="30" step="1" value="5" required></label>
+    <p>設定儲存在這台電腦，從該對手的下一次 API 呼叫生效。</p>
+    <p id="settingsStatus" role="status"></p><button class="primary" id="saveSettings">儲存設定</button>
+  </form>
+</dialog>
+<dialog id="journal"><form method="dialog"><button class="close" aria-label="關閉">×</button></form><h2>牌局紀錄</h2><ol id="logs"></ol></dialog>
+<script type="module" src="/app.js"></script>
+</html>
