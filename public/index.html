@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PlayRummi · 拉密牌桌</title><link rel="stylesheet" href="/style.css">
-<header><div class="brand"><i>R</i> PlayRummi</div><nav><button id="aiSettings">AI 設定</button><button id="history">牌局紀錄</button><button id="setup">開新桌</button></nav></header>
+<header><div class="brand"><i>R</i> PlayRummi</div><nav><button id="sound" type="button" aria-haspopup="dialog">聲音設定</button><button id="aiSettings">AI 設定</button><button id="history">牌局紀錄</button><button id="setup">開新桌</button></nav></header>
 <main>
   <section id="seats" aria-label="席位"></section>
   <section class="felt"><div class="tablehead"><span class="pool">牌池 <b id="pool">—</b> 張</span></div>
@@ -14,6 +14,20 @@
 </main>
 <dialog id="lobby"><form method="dialog"><button class="close" aria-label="關閉">×</button></form><small>RUMMI CLUB</small><h2>選擇牌友</h2>
 <p>選 1 至 3 位對手同桌。練習對手可直接遊玩。</p><div id="choices"></div><button id="lobbySettings">設定 AI 金鑰與模型</button><p id="lobbyNote"></p><button class="primary" id="start">洗牌開局</button></dialog>
+<dialog id="soundDialog" aria-labelledby="soundTitle">
+  <form method="dialog"><button class="close" aria-label="關閉">×</button></form>
+  <h2 id="soundTitle">聲音設定</h2>
+  <div class="sound-level">
+    <label for="musicVolume">背景音樂</label>
+    <output for="musicVolume" aria-hidden="true">100%</output>
+    <input id="musicVolume" name="music" type="range" min="0" max="100" value="100" autofocus>
+  </div>
+  <div class="sound-level">
+    <label for="effectsVolume">音效與回合提示</label>
+    <output for="effectsVolume" aria-hidden="true">100%</output>
+    <input id="effectsVolume" name="effects" type="range" min="0" max="100" value="100">
+  </div>
+</dialog>
 <dialog id="settingsDialog" aria-labelledby="settingsTitle">
   <form method="dialog"><button class="close" aria-label="關閉">×</button></form><h2 id="settingsTitle">AI 設定</h2>
   <form id="settingsForm">

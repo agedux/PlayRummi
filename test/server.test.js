@@ -19,7 +19,7 @@ test('browser endpoints save, resume and reject stale turns',async t=>{
   }
   t.after(async()=>{await stop();await rm(dir,{recursive:true,force:true})})
   await mkdir(join(dir,'public'))
-  for(const f of ['package.json','server.ts','game.ts','opponents.ts','rules.js','public/index.html','public/app.js','public/lines.js','public/style.css'])
+  for(const f of ['package.json','server.ts','game.ts','opponents.ts','rules.js','public/index.html','public/app.js','public/lines.js','public/audio.js','public/style.css'])
     await copyFile(new URL('../'+f,import.meta.url),join(dir,f))
   const probe=createServer()
   probe.listen(0,'127.0.0.1')
@@ -41,7 +41,7 @@ test('browser endpoints save, resume and reject stale turns',async t=>{
     {id:'deepseek',name:'DeepSeek',ready:true,model:'test-model',timeoutMinutes:5})
   assert.equal((await post('settings',{provider:'deepseek',model:'changed-model',timeoutMinutes:0})).status,400)
   assert.equal((await post('settings',{provider:'deepseek',model:'changed-model',timeoutMinutes:8})).status,200)
-  for(const path of ['/','/app.js','/style.css','/rules.js'])
+  for(const path of ['/','/app.js','/audio.js','/style.css','/rules.js'])
     assert.equal((await fetch(base+path)).status,200)
   const game=await (await post('new',{id:null,revision:null,seats:['local']})).json()
   assert.equal(game.hand.length,14)

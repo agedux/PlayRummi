@@ -84,6 +84,10 @@ dialog .primary { background:#21553f;color:#fffbea }
 .close { float:right;border:0;background:transparent;font-size:1.4rem;padding:0 .3rem }
 h2,p { margin:.2rem 0 .75rem }
 dialog label { display:flex;align-items:center;justify-content:space-between;margin:.65rem 0 }
+.sound-level { display:grid;grid-template-columns:1fr auto;align-items:center;gap:.35rem .75rem;margin-block:1rem }
+.sound-level label { margin:0;font-weight:650 }
+.sound-level output { font-variant-numeric:tabular-nums }
+.sound-level input { grid-column:1 / -1;width:100%;margin:0;padding:0;accent-color:#21553f }
 select,input { padding:.45rem;border-radius:6px;border:1px solid #bfbfae;background:white }
 dialog p { color:#566358 } #start { width:100% } #logs { max-height:54vh;overflow:auto }
 #settingsForm label { display:grid;gap:.25rem;font-weight:600 }

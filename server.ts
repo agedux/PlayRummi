@@ -33,7 +33,8 @@ const options = () => Object.entries(providers).map(([id,c]) => {
   return {id,name:c.name,ready:!!key,model,...(id==='deepseek'?{timeoutMinutes}:{})}
 })
 const assets:Record<string,[string,string]> = {'/':['public/index.html','text/html'],'/app.js':['public/app.js','text/javascript'],
-  '/rules.js':['rules.js','text/javascript'],'/lines.js':['public/lines.js','text/javascript'],'/style.css':['public/style.css','text/css']}
+  '/rules.js':['rules.js','text/javascript'],'/lines.js':['public/lines.js','text/javascript'],
+  '/audio.js':['public/audio.js','text/javascript'],'/style.css':['public/style.css','text/css']}
 let busy = false
 let pendingAI:{requestId:string, id:string, revision:number, controller:AbortController}|null=null
 createServer(async (req,res) => {

@@ -1,6 +1,9 @@
 import {colors,tile,points,splitMelds} from '/rules.js'
 import {readLines} from '/lines.js'
+import {playSound,setMusicActive,setupAudio} from '/audio.js'
 const $ = id => document.getElementById(id)
+setupAudio($('soundDialog'))
+$('sound').onclick=()=>$('soundDialog').showModal()
 const el = (tag,text,cls) => {
   const node = document.createElement(tag)
   if (text !== undefined) node.textContent = text
@@ -49,6 +52,7 @@ function accept(next) {
     dialogue.clear()
   }
   game=next
+  setMusicActive(!!game && !game.result)
   board=structuredClone(game?.board || [])
   selected=[]
   error=''
@@ -82,6 +86,7 @@ async function post(path,extra={}) {
 }
 async function act(path,extra) {
   if (busy) return
+  let yourTurn=false
   clearTimeout(aiTimer)
   busy=true
   error=''
@@ -101,17 +106,20 @@ async function act(path,extra) {
   try {
     const next=await post(path,extra)
     waiting=null
+    yourTurn=!next.result && next.turn===0 && (path==='new' || game.turn!==0)
     try {
       if (path==='ai') {
         await showTurn(next)
         say(game.turn,actionLine(next.log.at(-1).slice(game.players[game.turn].name.length+1)))
       }
+      if (path==='move' && extra.move.action==='play') playSound('play')
     }
     finally { playback=null; accept(next) }
     $('lobby').close()
   }
   catch(e) { error=e.message; if ($('lobby').open) $('lobbyNote').textContent=error }
   finally { clearInterval(clock); waiting=null; busy=false; render() }
+  if (yourTurn) playSound('turn',.14)
   if (game && !game.result && game.turn && !error) scheduleAI()
 }
 function scheduleAI() {
@@ -146,6 +154,7 @@ async function showTurn(next) {
     }
   }
   for (const id of added) {
+    playSound('select')
     await new Promise(resolve=>setTimeout(resolve,duration?200:80))
     const node=$('board').querySelector('[data-id="'+id+'"]')
     const source=$('seats').children[game.turn-1].querySelector('.avatar').getBoundingClientRect()
@@ -158,6 +167,7 @@ async function showTurn(next) {
       {transform:'translate('+(source.x+source.width/2-target.x-target.width/2)+'px,'+(source.y+source.height/2-target.y-target.height/2)+'px) rotate(-9deg) scale(.7)',opacity:.5},
       {transform:'none',opacity:1}
     ],{duration,easing:'cubic-bezier(.2,.65,.25,1)'}).finished
+    playSound('place')
   }
 }
 function rackIds() {
@@ -169,7 +179,7 @@ function rackIds() {
   })
   return [...rackOrder.filter(id=>rack.includes(id)),...rack.filter(id=>!rackOrder.includes(id))]
 }
-function moveTo(index,position) {
+function moveTo(index,position,pickedByDrag) {
   if (!myTurn() || !selected.length) return
   const original=index==='rack'?rackIds():board[index]||[]
   if (index!=='new' && index!=='rack' && !game.players[0].opened && original.some(id=>game.board.flat().includes(id))) {
@@ -186,6 +196,8 @@ function moveTo(index,position) {
     rows.splice(index,1,...splitMelds(rows[index]))
   }
   board=rows.filter(row=>row.length)
+  if (pickedByDrag) playSound('select')
+  if (index!=='rack') playSound('place',pickedByDrag ? .07 : 0)
   selected=[]
   error=''
   render()
@@ -197,7 +209,11 @@ function piece(id,onBoard) {
     if (onBoard && !game.players[0].opened && game.board.flat().includes(id)) {
       error='破冰前只能使用自己的手牌'; render(); return
     }
-    selected=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id]
+    if (selected.includes(id)) selected=selected.filter(x=>x!==id)
+    else {
+      selected=[...selected,id]
+      playSound('select')
+    }
     error=''
     render()
   },'tile c'+t.color)
@@ -354,7 +370,11 @@ function endDrag(event) {
   document.addEventListener('click',suppress,{capture:true,once:true})
   setTimeout(()=>document.removeEventListener('click',suppress,true),0)
   const target=dropTarget(event.clientX,event.clientY)
-  if (target) { selected=ids;moveTo(target.index,target.position) }
+  if (target) {
+    const pickedByDrag=!selected.includes(ids[0])
+    selected=ids
+    moveTo(target.index,target.position,pickedByDrag)
+  }
 }
 document.addEventListener('pointerup',endDrag)
 document.addEventListener('pointercancel',endDrag)
