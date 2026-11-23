@@ -19,6 +19,55 @@ export function same(a, b) {
   return a.length === b.length && a.every((id, i) => id === b[i])
 }
 
+function bestGroup(hand) {
+  const faces = new Map()
+  const jokers = []
+  for (const id of hand) {
+    const face = id % 52
+    if (tile(id).joker) jokers.push(id)
+    else if (!faces.has(face)) faces.set(face, id)
+  }
+  let best = [], bestScore = 0
+  function consider(pattern) {
+    const ids = []
+    let joker = jokers.length - 1
+    for (const face of pattern) {
+      const id = faces.get(face) ?? jokers[joker--]
+      if (id === undefined) return
+      ids.push(id)
+    }
+    const score = points(ids)
+    if (score > bestScore) {
+      best = ids
+      bestScore = score
+    }
+  }
+  for (let n = 0; n < 13; n++) {
+    const group = [n,n+13,n+26,n+39]
+    consider(group)
+    for (const omit of group) consider(group.filter(id => id !== omit))
+  }
+  for (let color = 0; color < 4; color++) {
+    for (let start = 0; start < 11; start++) {
+      for (let end = start+2; end < 13; end++)
+        consider(Array.from({length:end-start+1}, (_,i) => color*13+start+i))
+    }
+  }
+  return best
+}
+
+export function findMelds(hand) {
+  let remaining = [...hand]
+  const groups = []
+  let next = bestGroup(remaining)
+  while (next.length) {
+    groups.push(next)
+    remaining = remaining.filter(id => !next.includes(id))
+    next = bestGroup(remaining)
+  }
+  return {groups, remaining}
+}
+
 // Keep tile order and prefer the longest legal prefix that leaves a playable suffix.
 export function splitMelds(row) {
   if (row.length < 6 || points(row)) return [row]

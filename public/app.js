@@ -1,4 +1,4 @@
-import {colors,tile,points,splitMelds} from '/rules.js'
+import {colors,tile,points,findMelds,splitMelds} from '/rules.js'
 import {readLines} from '/lines.js'
 import {playSound,setMusicActive,setupAudio} from '/audio.js'
 const $ = id => document.getElementById(id)
@@ -16,7 +16,7 @@ function btn(label,fn,cls) {
   return b
 }
 let game, options=[], board=[], selected=[], byValue=false, busy=false, error='', aiTimer
-let rackOrder=[], drag=null, playback=null
+let rackOrder=[], groupRack=false, drag=null, playback=null
 let waiting=null
 const speechWindowMs=4000
 const dialogue=new Map()
@@ -107,6 +107,9 @@ async function act(path,extra) {
     const next=await post(path,extra)
     waiting=null
     yourTurn=!next.result && next.turn===0 && (path==='new' || game.turn!==0)
+    const drawn=path==='move' && extra.move.action==='draw'
+      ? next.hand.find(id=>!game.hand.includes(id))
+      : undefined
     try {
       if (path==='ai') {
         await showTurn(next)
@@ -115,6 +118,7 @@ async function act(path,extra) {
       if (path==='move' && extra.move.action==='play') playSound('play')
     }
     finally { playback=null; accept(next) }
+    if (drawn!==undefined) await showDraw(drawn)
     $('lobby').close()
   }
   catch(e) { error=e.message; if ($('lobby').open) $('lobbyNote').textContent=error }
@@ -125,6 +129,19 @@ async function act(path,extra) {
 function scheduleAI() {
   clearTimeout(aiTimer)
   if (!$('lobby').open && !$('settingsDialog').open) aiTimer=setTimeout(()=>act('ai'),850)
+}
+async function showDraw(id) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  render()
+  const node=$('hand').querySelector('[data-id="'+id+'"]')
+  const source=$('pool').closest('.pool').getBoundingClientRect()
+  const target=node.getBoundingClientRect()
+  const x=source.left-target.left+(source.width-target.width)/2
+  const y=source.top-target.top+(source.height-target.height)/2
+  await node.animate([
+    {transform:`translate(${x}px,${y}px) rotate(-12deg) scale(.55)`,opacity:.65,zIndex:20},
+    {transform:'none',opacity:1,zIndex:20}
+  ],{duration:420,easing:'cubic-bezier(.22,.65,.28,1)'}).finished.catch(()=>{})
 }
 async function showTurn(next) {
   const existing=new Set(game.board.flat())
@@ -170,14 +187,25 @@ async function showTurn(next) {
     playSound('place')
   }
 }
-function rackIds() {
+function compareTiles(a,b) {
+  const x=tile(a),y=tile(b)
+  return Number(x.joker)-Number(y.joker) || (byValue?x.value-y.value || x.color-y.color:x.color-y.color || x.value-y.value)
+}
+function rackLayout() {
   const inPlay=new Set(board.flat())
   const rack=[...(game?.hand||[]),...(game?.board.flat()||[])].filter(id=>!inPlay.has(id))
-  rack.sort((a,b)=>{
-    const x=tile(a),y=tile(b)
-    return Number(x.joker)-Number(y.joker) || (byValue?x.value-y.value || x.color-y.color:x.color-y.color || x.value-y.value)
-  })
-  return [...rackOrder.filter(id=>rack.includes(id)),...rack.filter(id=>!rackOrder.includes(id))]
+  rack.sort(compareTiles)
+  if (groupRack) {
+    const {groups,remaining}=findMelds(rack)
+    const firstFace=group=>group.find(id=>!tile(id).joker)
+    groups.sort((a,b)=>compareTiles(firstFace(a),firstFace(b)))
+    return {groups,remaining}
+  }
+  const remaining=[...rackOrder.filter(id=>rack.includes(id)),...rack.filter(id=>!rackOrder.includes(id))]
+  return {groups:[],remaining}
+}
+function rackIds() {
+  return Array.from($('hand').querySelectorAll('[data-id]'),node=>Number(node.dataset.id))
 }
 function moveTo(index,position,pickedByDrag) {
   if (!myTurn() || !selected.length) return
@@ -189,6 +217,7 @@ function moveTo(index,position,pickedByDrag) {
   const rows=board.map(row=>row.filter(id=>!selected.includes(id)))
   if (index==='new') rows.push([...selected])
   else if (index==='rack') {
+    groupRack=false
     rackOrder=original.filter(id=>!selected.includes(id))
     rackOrder.splice(offset,0,...selected)
   } else {
@@ -281,9 +310,17 @@ function render() {
     empty.append(motif,el('span',game?'等待第一組牌':'開一桌拉密'))
     $('board').append(empty)
   }
-  const rack=rackIds()
-  $('hand').replaceChildren(...rack.map(id=>piece(id,false)))
-  $('count').textContent=game?rack.length+' 張':''
+  const {groups,remaining}=rackLayout()
+  const melds=groups.map(ids=>{
+    const meld=el('div',undefined,'rack-meld')
+    meld.setAttribute('role','group')
+    meld.setAttribute('aria-label','可用組合')
+    meld.append(...ids.map(id=>piece(id,false)))
+    return meld
+  })
+  $('hand').replaceChildren(...melds,...remaining.map(id=>piece(id,false)))
+  const count=groups.reduce((total,ids)=>total+ids.length,remaining.length)
+  $('count').textContent=game?count+' 張':''
   $('sort').textContent=byValue?'依花色排列':'依數字排列'
   $('feedback').textContent=game?.result || (!game?.turn ? error : '')
   const actions=$('actions')
@@ -316,10 +353,11 @@ function dropTarget(x,y) {
   const index=rack?'rack':Number(group.dataset.row)
   if (group && !game.players[0].opened && board[index].some(id=>game.board.flat().includes(id))) return null
   let node=under.closest('.tile')
-  if (!node && group) {
+  const meld=group || under.closest('.rack-meld')
+  if (!node && meld) {
     // The gap between adjacent tiles is also an insertion target.
     let nearest=Infinity
-    for (const candidate of group.children) {
+    for (const candidate of meld.children) {
       const rect=candidate.getBoundingClientRect()
       const distance=Math.hypot(Math.max(rect.left-x,0,x-rect.right), Math.max(rect.top-y,0,y-rect.bottom))
       if (distance<nearest) { nearest=distance; node=candidate }
@@ -465,7 +503,12 @@ $('start').onclick=()=>{
   act('new',{seats})
 }
 $('lobby').onclose=()=>{if(game?.turn && !game.result && !busy && !error) scheduleAI()}
-$('sort').onclick=()=>{rackOrder=[];byValue=!byValue;render()}
+$('sort').onclick=()=>{
+  rackOrder=[]
+  groupRack=true
+  byValue=!byValue
+  render()
+}
 $('history').onclick=()=>{
   $('logs').replaceChildren(...(game.log.length?game.log:['牌局剛開始']).map(line=>el('li',line)))
   $('journal').showModal()

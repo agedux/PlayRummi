@@ -1,51 +1,19 @@
 import type {Game, Move} from './game.ts'
 import { readLines } from './public/lines.js'
-import { tile, points, colors } from './rules.js'
+import { tile, points, colors, findMelds } from './rules.js'
 
 export const providers = {
   deepseek: {name:'DeepSeek', key:'DEEPSEEK', model:'deepseek-flash'},
   openai: {name:'GPT', key:'OPENAI', model:'gpt-4.1-mini'},
   gemini: {name:'Gemini', key:'GEMINI', model:'gemini-2.5-flash'}
 }
-function bestGroup(hand:number[]) {
-  let best:number[] = []
-  function consider(pattern:number[]) {
-    const jokers = hand.filter(id => tile(id).joker)
-    const ids:number[] = []
-    for (const face of pattern) {
-      const id = hand.find(id => id < 104 && id % 52 === face) ?? jokers.pop()
-      if (id === undefined) return
-      ids.push(id)
-    }
-    if (points(ids) > points(best)) best = ids
-  }
-  for (let n=0; n<13; n++) {
-    const group = [n,n+13,n+26,n+39]
-    consider(group)
-    for (const omit of group) consider(group.filter(id => id !== omit))
-  }
-  for (let color=0; color<4; color++) {
-    for (let start=0; start<11; start++) {
-      for (let end=start+2; end<13; end++)
-        consider(Array.from({length:end-start+1}, (_,i) => color*13+start+i))
-    }
-  }
-  return best
-}
 export function practice(g:Game): Move {
   const p = g.players[g.turn]
-  let hand = [...p.hand]
-  const groups:number[][] = []
-  let next = bestGroup(hand)
-  while (next.length) {
-    groups.push(next)
-    hand = hand.filter(id => !next.includes(id))
-    next = bestGroup(hand)
-  }
+  const {groups, remaining} = findMelds(p.hand)
   if (!p.opened && groups.reduce((n,row) => n+points(row),0)<30) return {action:'draw'}
   const board = structuredClone(g.board)
   if (p.opened) {
-    for (const id of hand) {
+    for (const id of remaining) {
       let used = false
       for (const row of board) {
         for (let i=0; i<=row.length; i++) {
