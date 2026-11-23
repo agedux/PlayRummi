@@ -196,7 +196,7 @@ function rackLayout() {
   const rack=[...(game?.hand||[]),...(game?.board.flat()||[])].filter(id=>!inPlay.has(id))
   rack.sort(compareTiles)
   if (groupRack) {
-    const {groups,remaining}=findMelds(rack)
+    const {groups,remaining}=findMelds(rack,byValue?'set':'run')
     const firstFace=group=>group.find(id=>!tile(id).joker)
     groups.sort((a,b)=>compareTiles(firstFace(a),firstFace(b)))
     return {groups,remaining}

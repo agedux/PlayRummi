@@ -19,7 +19,21 @@ export function same(a, b) {
   return a.length === b.length && a.every((id, i) => id === b[i])
 }
 
-function bestGroup(hand) {
+const setPatterns = [], runPatterns = []
+for (let n = 0; n < 13; n++) {
+  const group = [n,n+13,n+26,n+39]
+  setPatterns.push(group)
+  for (const omit of group) setPatterns.push(group.filter(id => id !== omit))
+}
+for (let color = 0; color < 4; color++) {
+  for (let start = 0; start < 11; start++) {
+    for (let end = start+2; end < 13; end++)
+      runPatterns.push(Array.from({length:end-start+1}, (_,i) => color*13+start+i))
+  }
+}
+const meldPatterns = {set:setPatterns, run:runPatterns, all:[...setPatterns,...runPatterns]}
+
+function bestGroup(hand, patterns) {
   const faces = new Map()
   const jokers = []
   for (const id of hand) {
@@ -42,28 +56,19 @@ function bestGroup(hand) {
       bestScore = score
     }
   }
-  for (let n = 0; n < 13; n++) {
-    const group = [n,n+13,n+26,n+39]
-    consider(group)
-    for (const omit of group) consider(group.filter(id => id !== omit))
-  }
-  for (let color = 0; color < 4; color++) {
-    for (let start = 0; start < 11; start++) {
-      for (let end = start+2; end < 13; end++)
-        consider(Array.from({length:end-start+1}, (_,i) => color*13+start+i))
-    }
-  }
+  for (const pattern of patterns) consider(pattern)
   return best
 }
 
-export function findMelds(hand) {
+export function findMelds(hand, kind='all') {
+  const patterns = meldPatterns[kind]
   let remaining = [...hand]
   const groups = []
-  let next = bestGroup(remaining)
+  let next = bestGroup(remaining,patterns)
   while (next.length) {
     groups.push(next)
     remaining = remaining.filter(id => !next.includes(id))
-    next = bestGroup(remaining)
+    next = bestGroup(remaining,patterns)
   }
   return {groups, remaining}
 }

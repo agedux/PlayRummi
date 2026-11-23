@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {createGame,play,view} from '../game.ts'
 import {choose,practice,providers} from '../opponents.ts'
-import {points} from '../rules.js'
+import {findMelds,points} from '../rules.js'
 
 test('a timed-out opponent passes when the pool is empty',()=>{
   const g=createGame([{name:'GPT',provider:'openai'}])
@@ -60,6 +60,11 @@ test('groups, runs, jokers and opening rollback',()=>{
   assert.throws(()=>play(g,{action:'play',board:[[12,25,38]]}),/遺漏/)
   play(g,{action:'play',board:[[8,9,10,11],[12,25,38]]})
   assert.ok(g.result)
+})
+test('rack sorting shows sets by number and runs by color',()=>{
+  const hand=[3,4,5,18,31,44]
+  assert.deepEqual(findMelds(hand,'set'),{groups:[[5,18,31,44]],remaining:[3,4]})
+  assert.deepEqual(findMelds(hand,'run'),{groups:[[3,4,5]],remaining:[18,31,44]})
 })
 test('four-seat games reach a result and conserve tiles',()=>{
   const g=createGame(['A','B','C'].map(name=>({name,provider:'local'})))
